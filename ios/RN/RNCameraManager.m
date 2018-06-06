@@ -184,6 +184,18 @@ RCT_CUSTOM_VIEW_PROPERTY(exposure, NSInteger, RNCamera)
     [view updateExposure];
 }
 
+RCT_CUSTOM_VIEW_PROPERTY(iso, NSInteger, RNCamera)
+{
+    [view setIso:[RCTConvert NSInteger:json]];
+    [view updateExposure];
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(duration, NSNumber, RNCamera)
+{
+    [view setDuration:[RCTConvert float:json]];
+    [view updateExposure];
+}
+
 RCT_CUSTOM_VIEW_PROPERTY(whiteBalance, NSInteger, RNCamera)
 {
     [view setWhiteBalance:[RCTConvert NSInteger:json]];
