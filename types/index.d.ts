@@ -15,7 +15,8 @@ import { ViewProperties } from "react-native";
 type AutoFocus = Readonly<{ on: any, off: any }>;
 type FlashMode = Readonly<{ on: any, off: any, torch: any, auto: any }>;
 type CameraType = Readonly<{ front: any, back: any }>;
-type WhiteBalance = Readonly<{ sunny: any, cloudy: any, shadow: any, incandescent: any, fluorescent: any, auto: any }>;
+type WhiteBalance = Readonly<{ sunny: any, cloudy: any, shadow: any, incandescent: any, fluorescent: any, auto: any, custom: any }>;
+type Exposure = Readonly<{ lock: any, auto: any, custom: any }>;
 type BarCodeType = Readonly<{ aztec: any, code128: any, code39: any, code39mod43: any, code93: any, ean13: any, ean8: any, pdf417: any, qr: any, upce: any, interleaved2of5: any, itf14: any, datamatrix: any }>;
 type VideoQuality = Readonly<{
     '2160p': any, '1080p': any, '720p': any, '480p': any, '4:3': any;
@@ -47,6 +48,7 @@ export interface Constants {
     VideoCodec: VideoCodec;
     Type: CameraType;
     WhiteBalance: WhiteBalance;
+    Exposure: Exposure;
     VideoQuality: VideoQuality;
     BarCodeType: BarCodeType;
     FaceDetection: {
@@ -78,6 +80,18 @@ export interface RNCameraProps {
     zoom?: number;
     /** Value: float from 0 to 1.0 */
     focusDepth?: number;
+
+    // -- Exposure props
+    /** Value: integer */
+    iso?: number;
+    /** Value: float */
+    duration?: number;
+
+    // -- White-balance props
+    /** Value: integer */
+    temperature?: number;
+    /** Value: integer */
+    tint?: number;
 
     // -- BARCODE PROPS
     barCodeTypes?: Array<keyof BarCodeType>;
