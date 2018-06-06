@@ -25,10 +25,14 @@
 
 @property(nonatomic, assign) NSInteger presetCamera;
 @property (assign, nonatomic) NSInteger flashMode;
+@property (assign, nonatomic) NSInteger iso;
+@property (assign, nonatomic) float duration;
 @property (assign, nonatomic) CGFloat zoom;
 @property (assign, nonatomic) NSInteger autoFocus;
 @property (assign, nonatomic) float focusDepth;
 @property (assign, nonatomic) NSInteger whiteBalance;
+@property (assign, nonatomic) NSInteger temperature;
+@property (assign, nonatomic) NSInteger tint;
 @property (assign, nonatomic) AVCaptureSessionPreset pictureSize;
 @property (nonatomic, assign) BOOL isReadingBarCodes;
 @property (nonatomic, assign) BOOL isDetectingFaces;
@@ -39,6 +43,7 @@
 - (void)updateFlashMode;
 - (void)updateFocusMode;
 - (void)updateFocusDepth;
+- (void)updateExposure;
 - (void)updateZoom;
 - (void)updateWhiteBalance;
 - (void)updatePictureSize;

@@ -41,6 +41,11 @@ RCT_EXPORT_VIEW_PROPERTY(onPictureSaved, RCTDirectEventBlock);
                      },
              @"AutoFocus" :
                  @{@"on" : @(RNCameraAutoFocusOn), @"off" : @(RNCameraAutoFocusOff)},
+             @"Exposure" : @{
+                     @"auto" : @(RNCameraExposureAuto),
+                     @"lock" : @(RNCameraExposureLocked),
+                     @"custom" : @(RNCameraExposureCustom)
+                     },
              @"WhiteBalance" : @{
                      @"auto" : @(RNCameraWhiteBalanceAuto),
                      @"sunny" : @(RNCameraWhiteBalanceSunny),
@@ -48,6 +53,7 @@ RCT_EXPORT_VIEW_PROPERTY(onPictureSaved, RCTDirectEventBlock);
                      @"shadow" : @(RNCameraWhiteBalanceShadow),
                      @"incandescent" : @(RNCameraWhiteBalanceIncandescent),
                      @"fluorescent" : @(RNCameraWhiteBalanceFluorescent)
+                     @"custom" : @(RNCameraWhiteBalanceCustom)
                      },
              @"VideoQuality": @{
                      @"2160p": @(RNCameraVideo2160p),
@@ -172,9 +178,27 @@ RCT_CUSTOM_VIEW_PROPERTY(zoom, NSNumber, RNCamera)
     [view updateZoom];
 }
 
+RCT_CUSTOM_VIEW_PROPERTY(exposure, NSInteger, RNCamera)
+{
+    [view setExposure:[RCTConvert NSInteger:json]];
+    [view updateExposure];
+}
+
 RCT_CUSTOM_VIEW_PROPERTY(whiteBalance, NSInteger, RNCamera)
 {
     [view setWhiteBalance:[RCTConvert NSInteger:json]];
+    [view updateWhiteBalance];
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(temperature, NSInteger, RNCamera)
+{
+    [view setTemperature:[RCTConvert NSInteger:json]];
+    [view updateWhiteBalance];
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(tint, NSInteger, RNCamera)
+{
+    [view setTint:[RCTConvert NSInteger:json]];
     [view updateWhiteBalance];
 }
 

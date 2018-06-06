@@ -240,6 +240,47 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     }];
 }
 
+/**
+ * Update iso and duration for custom exposure
+ */
+- (void)updateExposure
+{
+    if (self.exposure != RNCameraExposureCustom) {
+        RCTLogWarn(@"updateExposure, NOT custom");
+        return;
+    } else {
+        RCTLogWarn(@"updateExposure, SO custom");
+    }
+
+    AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+    NSError *error = nil;
+    __weak __typeof__(device) weakDevice = device;
+
+    CMTime *duration = AVCaptureExposureDurationCurrent;
+    float iso = AVCaptureISOCurrent;
+    if (self.iso != nil) {
+        iso = self.iso;
+        RCTLogWarn(@"updateExposure, custom iso: %f", iso);
+    }
+    if (self.duration != nil) {
+        duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
+        RCTLogWarn(@"updateExposure, custom duration: %@", duration);
+    }
+
+    if (![device lockForConfiguration:&error]) {
+        if (error) {
+            RCTLogError(@"%s: %@", __func__, error);
+        }
+        return;
+    }
+
+    [device setExposureModeCustomWithDuration:duration ISO:iso completionHandler:^(CMTime syncTime) {
+        [weakDevice unlockForConfiguration];
+    }];
+
+    [device unlockForConfiguration];
+}
+
 - (void)updateZoom {
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
@@ -276,7 +317,20 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             .temperature = [RNCameraUtils temperatureForWhiteBalance:self.whiteBalance],
             .tint = 0,
         };
+        if (self.whiteBalance == RNCameraWhiteBalanceCustom) {
+            temperatureAndTint = {
+                .temperature = self.temperature,
+                .tint = self.tint,
+            };
+            RCTLogWarn(@"updateWhiteBalance, custommmmmm");
+        }
         AVCaptureWhiteBalanceGains rgbGains = [device deviceWhiteBalanceGainsForTemperatureAndTintValues:temperatureAndTint];
+        if (self.whiteBalance == RNCameraWhiteBalanceCustom) {
+            rgbGains.redGain = MAX(1.0, rgbGains.redGain);
+	        rgbGains.greenGain = MAX(1.0, rgbGains.greenGain);
+	        rgbGains.blueGain = MAX(1.0, rgbGains.blueGain);
+        }
+
         __weak __typeof__(device) weakDevice = device;
         if ([device lockForConfiguration:&error]) {
             [device setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:rgbGains completionHandler:^(CMTime syncTime) {
@@ -592,6 +646,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
             self.videoCaptureDeviceInput = captureDeviceInput;
             [self updateFlashMode];
+            [self updateExposure];
             [self updateZoom];
             [self updateFocusMode];
             [self updateFocusDepth];

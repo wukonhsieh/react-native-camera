@@ -39,6 +39,7 @@ typedef NS_ENUM(NSInteger, RNCameraWhiteBalance) {
     RNCameraWhiteBalanceShadow = 4,
     RNCameraWhiteBalanceIncandescent = 5,
     RNCameraWhiteBalanceFluorescent = 6,
+    RNCameraWhiteBalanceCustom = 9,
 };
 
 typedef NS_ENUM(NSInteger, RNCameraExposureMode) {
