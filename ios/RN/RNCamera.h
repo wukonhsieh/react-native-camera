@@ -25,6 +25,7 @@
 
 @property(nonatomic, assign) NSInteger presetCamera;
 @property (assign, nonatomic) NSInteger flashMode;
+@property (assign, nonatomic) NSInteger exposure;
 @property (assign, nonatomic) NSInteger iso;
 @property (assign, nonatomic) float duration;
 @property (assign, nonatomic) CGFloat zoom;
