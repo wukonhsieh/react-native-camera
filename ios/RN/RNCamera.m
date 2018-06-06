@@ -256,15 +256,15 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     NSError *error = nil;
     __weak __typeof__(device) weakDevice = device;
 
-    CMTime *duration = AVCaptureExposureDurationCurrent;
+    CMTime duration = AVCaptureExposureDurationCurrent;
     float iso = AVCaptureISOCurrent;
-    if (self.iso != nil) {
+    if (self.iso > 0) {
         iso = self.iso;
         RCTLogWarn(@"updateExposure, custom iso: %f", iso);
     }
-    if (self.duration != nil) {
+    if (self.duration > 0) {
         duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
-        RCTLogWarn(@"updateExposure, custom duration: %@", duration);
+        RCTLogWarn(@"updateExposure, custom duration: %f", self.duration);
     }
 
     if (![device lockForConfiguration:&error]) {
@@ -313,32 +313,40 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         [device setWhiteBalanceMode:AVCaptureWhiteBalanceModeContinuousAutoWhiteBalance];
         [device unlockForConfiguration];
     } else {
-        AVCaptureWhiteBalanceTemperatureAndTintValues temperatureAndTint = {
-            .temperature = [RNCameraUtils temperatureForWhiteBalance:self.whiteBalance],
-            .tint = 0,
-        };
+        __weak __typeof__(device) weakDevice = device;
         if (self.whiteBalance == RNCameraWhiteBalanceCustom) {
-            temperatureAndTint = {
+            AVCaptureWhiteBalanceTemperatureAndTintValues temperatureAndTint = {
                 .temperature = self.temperature,
                 .tint = self.tint,
             };
             RCTLogWarn(@"updateWhiteBalance, custommmmmm");
-        }
-        AVCaptureWhiteBalanceGains rgbGains = [device deviceWhiteBalanceGainsForTemperatureAndTintValues:temperatureAndTint];
-        if (self.whiteBalance == RNCameraWhiteBalanceCustom) {
+            AVCaptureWhiteBalanceGains rgbGains = [device deviceWhiteBalanceGainsForTemperatureAndTintValues:temperatureAndTint];
             rgbGains.redGain = MAX(1.0, rgbGains.redGain);
-	        rgbGains.greenGain = MAX(1.0, rgbGains.greenGain);
-	        rgbGains.blueGain = MAX(1.0, rgbGains.blueGain);
-        }
-
-        __weak __typeof__(device) weakDevice = device;
-        if ([device lockForConfiguration:&error]) {
-            [device setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:rgbGains completionHandler:^(CMTime syncTime) {
-                [weakDevice unlockForConfiguration];
-            }];
+            rgbGains.greenGain = MAX(1.0, rgbGains.greenGain);
+            rgbGains.blueGain = MAX(1.0, rgbGains.blueGain);
+            if ([device lockForConfiguration:&error]) {
+                [device setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:rgbGains completionHandler:^(CMTime syncTime) {
+                    [weakDevice unlockForConfiguration];
+                }];
+            } else {
+                if (error) {
+                    RCTLogError(@"%s: %@", __func__, error);
+                }
+            }
         } else {
-            if (error) {
-                RCTLogError(@"%s: %@", __func__, error);
+            AVCaptureWhiteBalanceTemperatureAndTintValues temperatureAndTint = {
+                .temperature = [RNCameraUtils temperatureForWhiteBalance:self.whiteBalance],
+                .tint = 0,
+            };
+            AVCaptureWhiteBalanceGains rgbGains = [device deviceWhiteBalanceGainsForTemperatureAndTintValues:temperatureAndTint];
+            if ([device lockForConfiguration:&error]) {
+                [device setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:rgbGains completionHandler:^(CMTime syncTime) {
+                    [weakDevice unlockForConfiguration];
+                }];
+            } else {
+                if (error) {
+                    RCTLogError(@"%s: %@", __func__, error);
+                }
             }
         }
     }
