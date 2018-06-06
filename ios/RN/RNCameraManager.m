@@ -52,7 +52,7 @@ RCT_EXPORT_VIEW_PROPERTY(onPictureSaved, RCTDirectEventBlock);
                      @"cloudy" : @(RNCameraWhiteBalanceCloudy),
                      @"shadow" : @(RNCameraWhiteBalanceShadow),
                      @"incandescent" : @(RNCameraWhiteBalanceIncandescent),
-                     @"fluorescent" : @(RNCameraWhiteBalanceFluorescent)
+                     @"fluorescent" : @(RNCameraWhiteBalanceFluorescent),
                      @"custom" : @(RNCameraWhiteBalanceCustom)
                      },
              @"VideoQuality": @{
