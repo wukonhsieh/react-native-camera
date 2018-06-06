@@ -246,10 +246,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 - (void)updateExposure
 {
     if (self.exposure != RNCameraExposureCustom) {
-        RCTLogWarn(@"updateExposure, NOT custom");
         return;
-    } else {
-        RCTLogWarn(@"updateExposure, SO custom");
     }
 
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
@@ -260,11 +257,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     float iso = AVCaptureISOCurrent;
     if (self.iso > 0) {
         iso = self.iso;
-        RCTLogWarn(@"updateExposure, custom iso: %f", iso);
     }
     if (self.duration > 0) {
         duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
-        RCTLogWarn(@"updateExposure, custom duration: %f", self.duration);
     }
 
     if (![device lockForConfiguration:&error]) {
@@ -319,7 +314,6 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
                 .temperature = self.temperature,
                 .tint = self.tint,
             };
-            RCTLogWarn(@"updateWhiteBalance, custommmmmm");
             AVCaptureWhiteBalanceGains rgbGains = [device deviceWhiteBalanceGainsForTemperatureAndTintValues:temperatureAndTint];
             rgbGains.redGain = MAX(1.0, rgbGains.redGain);
             rgbGains.greenGain = MAX(1.0, rgbGains.greenGain);
