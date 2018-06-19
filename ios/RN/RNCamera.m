@@ -785,11 +785,11 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         return;
     }
 
-    NSArray<AVMetadataObjectType> *availableRequestedObjectTypes = [[NSArray alloc] init];
-    NSArray<AVMetadataObjectType> *requestedObjectTypes = [NSArray arrayWithArray:self.barCodeTypes];
-    NSArray<AVMetadataObjectType> *availableObjectTypes = _metadataOutput.availableMetadataObjectTypes;
+    NSArray *availableRequestedObjectTypes = [[NSArray alloc] init];
+    NSArray *requestedObjectTypes = [NSArray arrayWithArray:self.barCodeTypes];
+    NSArray *availableObjectTypes = _metadataOutput.availableMetadataObjectTypes;
 
-    for(AVMetadataObjectType objectType in requestedObjectTypes) {
+    for(NSString *objectType in requestedObjectTypes) {
         if ([availableObjectTypes containsObject:objectType]) {
             availableRequestedObjectTypes = [availableRequestedObjectTypes arrayByAddingObject:objectType];
         }

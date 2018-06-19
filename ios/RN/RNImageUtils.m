@@ -6,6 +6,7 @@
 //
 
 #import "RNImageUtils.h"
+#import <ImageIO/ImageIO.h>
 
 @implementation RNImageUtils
 

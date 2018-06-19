@@ -11,7 +11,7 @@
 
 # pragma mark - Camera utilities
 
-+ (AVCaptureDevice *)deviceWithMediaType:(AVMediaType)mediaType preferringPosition:(AVCaptureDevicePosition)position
++ (AVCaptureDevice *)deviceWithMediaType:(NSString*)mediaType preferringPosition:(AVCaptureDevicePosition)position
 {
     NSArray *devices = [AVCaptureDevice devicesWithMediaType:mediaType];
     AVCaptureDevice *captureDevice = [devices firstObject];
