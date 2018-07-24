@@ -251,16 +251,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
-    __weak __typeof__(device) weakDevice = device;
 
-    CMTime duration = AVCaptureExposureDurationCurrent;
-    float iso = AVCaptureISOCurrent;
-    if (self.iso > 0) {
-        iso = self.iso;
-    }
-    if (self.duration > 0) {
-        duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
-    }
+    CMTime duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
+    float iso = self.iso;
 
     if (![device lockForConfiguration:&error]) {
         if (error) {
@@ -269,9 +262,8 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         return;
     }
 
-    [device setExposureModeCustomWithDuration:duration ISO:iso completionHandler:^(CMTime syncTime) {
-        [weakDevice unlockForConfiguration];
-    }];
+    [device setExposureMode:AVCaptureExposureModeCustom];
+    [device setExposureModeCustomWithDuration:duration ISO:iso completionHandler:nil];
 
     [device unlockForConfiguration];
 }
