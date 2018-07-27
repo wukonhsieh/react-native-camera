@@ -251,6 +251,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
+    __weak __typeof__(device) weakDevice = device;
 
     CMTime duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
     float iso = self.iso;
@@ -263,9 +264,10 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     }
 
     [device setExposureMode:AVCaptureExposureModeCustom];
-    [device setExposureModeCustomWithDuration:duration ISO:iso completionHandler:nil];
-
-    [device unlockForConfiguration];
+    [device setExposureModeCustomWithDuration:duration ISO:iso completionHandler:^(CMTime syncTime) {
+        [weakDevice unlockForConfiguration];
+    }];
+    [self.session commitConfiguration];
 }
 
 - (void)updateZoom {
@@ -289,14 +291,14 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
 
-    if (![device lockForConfiguration:&error]) {
-        if (error) {
-            RCTLogError(@"%s: %@", __func__, error);
-        }
-        return;
-    }
-
     if (self.whiteBalance == RNCameraWhiteBalanceAuto) {
+        if (![device lockForConfiguration:&error]) {
+            if (error) {
+                RCTLogError(@"%s: %@", __func__, error);
+            }
+            return;
+        }
+
         [device setWhiteBalanceMode:AVCaptureWhiteBalanceModeContinuousAutoWhiteBalance];
         [device unlockForConfiguration];
     } else {
@@ -312,12 +314,14 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             rgbGains.blueGain = MAX(1.0, rgbGains.blueGain);
             if ([device lockForConfiguration:&error]) {
                 [device setWhiteBalanceModeLockedWithDeviceWhiteBalanceGains:rgbGains completionHandler:^(CMTime syncTime) {
+                    RCTLog(@"updateWhiteBalance custom configs set");
                     [weakDevice unlockForConfiguration];
                 }];
             } else {
                 if (error) {
                     RCTLogError(@"%s: %@", __func__, error);
                 }
+                return;
             }
         } else {
             AVCaptureWhiteBalanceTemperatureAndTintValues temperatureAndTint = {
@@ -333,11 +337,10 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
                 if (error) {
                     RCTLogError(@"%s: %@", __func__, error);
                 }
+                return;
             }
         }
     }
-
-    [device unlockForConfiguration];
 }
 
 - (void)updatePictureSize
@@ -367,8 +370,18 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 }
 #endif
 
+- (void) exposureOffsetWithResolve:(RCTPromiseResolveBlock)resolve andReject:(RCTPromiseRejectBlock)reject {
+    if (!self.videoCaptureDeviceInput) {
+        reject(nil, nil, nil);
+        return;
+    }
+    AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+    resolve(@(device.exposureTargetOffset));
+}
+
 - (void)takePicture:(NSDictionary *)options resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject
 {
+    AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     AVCaptureConnection *connection = [self.stillImageOutput connectionWithMediaType:AVMediaTypeVideo];
     int orientation;
     if ([options[@"orientation"] integerValue]) {
@@ -376,9 +389,25 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     } else {
         orientation = [RNCameraUtils videoOrientationForDeviceOrientation:[[UIDevice currentDevice] orientation]];
     }
+    RCTLog(@"takePicture ---------START");
+
+    RCTLog(@"takePicture device iso %f", device.ISO);
+    RCTLog(@"takePicture device duration %f", CMTimeGetSeconds(device.exposureDuration));
+    RCTLog(@"takePicture device bias %f", device.exposureTargetBias);
+    RCTLog(@"takePicture device offset %f", device.exposureTargetOffset);
+    RCTLog(@"takePicture device R gain %f", device.deviceWhiteBalanceGains.redGain);
+    RCTLog(@"takePicture device G gain %f", device.deviceWhiteBalanceGains.greenGain);
+    RCTLog(@"takePicture device B gain %f", device.deviceWhiteBalanceGains.blueGain);
+    RCTLog(@"takePicture device wb mode %ld", device.whiteBalanceMode);
+    RCTLog(@"takePicture device mode %ld", device.exposureMode);
+
+    RCTLog(@"takePicture ---------END");
+
+    __weak typeof(self) weakSelf = self;
     [connection setVideoOrientation:orientation];
     [self.stillImageOutput captureStillImageAsynchronouslyFromConnection:connection completionHandler: ^(CMSampleBufferRef imageSampleBuffer, NSError *error) {
-        if (imageSampleBuffer && !error) {
+        RNCamera* strongSelf = weakSelf;
+        if (imageSampleBuffer && !error && strongSelf) {
             BOOL useFastMode = options[@"fastMode"] && [options[@"fastMode"] boolValue];
             if (useFastMode) {
                 resolve(nil);
@@ -390,9 +419,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             CGImageRef takenCGImage = takenImage.CGImage;
             CGSize previewSize;
             if (UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation])) {
-                previewSize = CGSizeMake(self.previewLayer.frame.size.height, self.previewLayer.frame.size.width);
+                previewSize = CGSizeMake(strongSelf.previewLayer.frame.size.height, strongSelf.previewLayer.frame.size.width);
             } else {
-                previewSize = CGSizeMake(self.previewLayer.frame.size.width, self.previewLayer.frame.size.height);
+                previewSize = CGSizeMake(strongSelf.previewLayer.frame.size.width, strongSelf.previewLayer.frame.size.height);
             }
             CGRect cropRect = CGRectMake(0, 0, CGImageGetWidth(takenCGImage), CGImageGetHeight(takenCGImage));
             CGRect croppedSize = AVMakeRectWithAspectRatioInsideRect(previewSize, cropRect);
@@ -447,7 +476,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             }
 
             if (useFastMode) {
-                [self onPictureSaved:@{@"data": response, @"id": options[@"id"]}];
+                [strongSelf onPictureSaved:@{@"data": response, @"id": options[@"id"]}];
             } else {
                 resolve(response);
             }
@@ -640,11 +669,11 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
             self.videoCaptureDeviceInput = captureDeviceInput;
             [self updateFlashMode];
-            [self updateExposure];
             [self updateZoom];
             [self updateFocusMode];
             [self updateFocusDepth];
             [self updateWhiteBalance];
+            [self updateExposure];
             [self.previewLayer.connection setVideoOrientation:orientation];
             [self _updateMetadataObjectsToRecognize];
         }

@@ -293,6 +293,21 @@ RCT_REMAP_METHOD(takePicture,
     }];
 }
 
+RCT_REMAP_METHOD(exposureOffset,
+                 exposureOffsetWithReactTag:(nonnull NSNumber *)reactTag
+                 resolve:(RCTPromiseResolveBlock)resolve
+                 andReject:(RCTPromiseRejectBlock)reject)
+{
+    [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RNCamera *> *viewRegistry) {
+        RNCamera *view = viewRegistry[reactTag];
+        if (![view isKindOfClass:[RNCamera class]]) {
+            RCTLogError(@"Invalid view returned from registry, expecting RNCamera, got: %@", view);
+        } else {
+            [view exposureOffsetWithResolve:resolve andReject:reject];
+        }
+    }];
+}
+
 RCT_REMAP_METHOD(record,
                  withOptions:(NSDictionary *)options
                  reactTag:(nonnull NSNumber *)reactTag

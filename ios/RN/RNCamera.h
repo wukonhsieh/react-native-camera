@@ -53,6 +53,7 @@
 - (void)updateFaceDetectionLandmarks:(id)requestedLandmarks;
 - (void)updateFaceDetectionClassifications:(id)requestedClassifications;
 - (void)takePicture:(NSDictionary *)options resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject;
+- (void)exposureOffsetWithResolve:(RCTPromiseResolveBlock)resolve andReject:(RCTPromiseRejectBlock)reject;
 - (void)record:(NSDictionary *)options resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject;
 - (void)stopRecording;
 - (void)resumePreview;
