@@ -7,6 +7,7 @@
 #import <React/RCTUtils.h>
 #import <React/UIView+React.h>
 
+
 @interface RNCamera ()
 
 @property (nonatomic, weak) RCTBridge *bridge;
@@ -383,12 +384,13 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 {
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     AVCaptureConnection *connection = [self.stillImageOutput connectionWithMediaType:AVMediaTypeVideo];
-    int orientation;
-    if ([options[@"orientation"] integerValue]) {
-        orientation = [options[@"orientation"] integerValue];
-    } else {
-        orientation = [RNCameraUtils videoOrientationForDeviceOrientation:[[UIDevice currentDevice] orientation]];
-    }
+    // Fix orientation to portrait mode
+    int orientation = AVCaptureVideoOrientationPortrait;
+//    if ([options[@"orientation"] integerValue]) {
+//        orientation = [options[@"orientation"] integerValue];
+//    } else {
+//        orientation = [RNCameraUtils videoOrientationForDeviceOrientation:[[UIDevice currentDevice] orientation]];
+//    }
     RCTLog(@"takePicture ---------START");
 
     RCTLog(@"takePicture device iso %f", device.ISO);
@@ -441,16 +443,17 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
             float quality = [options[@"quality"] floatValue];
             NSData *takenImageData = UIImageJPEGRepresentation(takenImage, quality);
-            NSString *path = [RNFileSystem generatePathInDirectory:[[RNFileSystem cacheDirectoryPath] stringByAppendingPathComponent:@"Camera"] withExtension:@".jpg"];
-            response[@"uri"] = [RNImageUtils writeImage:takenImageData toPath:path];
+            // Save images to tmp dir instead of cache dir
+            NSString *documentsDirectory = NSTemporaryDirectory();
+            NSString *fullPath = [[documentsDirectory stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]] stringByAppendingPathExtension:@"jpg"];
+
+            response[@"uri"] = [RNImageUtils writeImage:imageData toPath:fullPath];
             response[@"width"] = @(takenImage.size.width);
             response[@"height"] = @(takenImage.size.height);
 
             if ([options[@"base64"] boolValue]) {
                 response[@"base64"] = [takenImageData base64EncodedStringWithOptions:0];
             }
-
-
 
             if ([options[@"exif"] boolValue]) {
                 int imageRotation;
@@ -573,14 +576,14 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         if (self.presetCamera == AVCaptureDevicePositionUnspecified) {
             return;
         }
-
-        self.session.sessionPreset = AVCaptureSessionPresetPhoto;
+        // Fix resolution to 1920 * 1080
+        self.session.sessionPreset = AVCaptureSessionPreset1920x1080;
         
         AVCaptureStillImageOutput *stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
         if ([self.session canAddOutput:stillImageOutput]) {
             stillImageOutput.outputSettings = @{AVVideoCodecKey : AVVideoCodecJPEG};
             [self.session addOutput:stillImageOutput];
-            [stillImageOutput setHighResolutionStillImageOutputEnabled:YES];
+//            [stillImageOutput setHighResolutionStillImageOutputEnabled:YES];
             self.stillImageOutput = stillImageOutput;
         }
 
