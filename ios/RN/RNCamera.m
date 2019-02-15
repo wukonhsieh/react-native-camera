@@ -443,11 +443,17 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
             float quality = [options[@"quality"] floatValue];
             NSData *takenImageData = UIImageJPEGRepresentation(takenImage, quality);
-            // Save images to tmp dir instead of cache dir
-            NSString *documentsDirectory = NSTemporaryDirectory();
-            NSString *fullPath = [[documentsDirectory stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]] stringByAppendingPathExtension:@"jpg"];
+            if ([options[@"preview"] boolValue]) {
+                // no need for exif
+                NSString *path = [RNFileSystem generatePathInDirectory:[[RNFileSystem cacheDirectoryPath] stringByAppendingPathComponent:@"Camera"] withExtension:@".jpg"];
+                response[@"uri"] = [RNImageUtils writeImage:takenImageData toPath:path];
+            } else {
+                // Save images to tmp dir instead of cache dir to keep exif
+                NSString *documentsDirectory = NSTemporaryDirectory();
+                NSString *fullPath = [[documentsDirectory stringByAppendingPathComponent:[[NSUUID UUID] UUIDString]] stringByAppendingPathExtension:@"jpg"];
 
-            response[@"uri"] = [RNImageUtils writeImage:imageData toPath:fullPath];
+                response[@"uri"] = [RNImageUtils writeImage:imageData toPath:fullPath];
+            }
             response[@"width"] = @(takenImage.size.width);
             response[@"height"] = @(takenImage.size.height);
 
@@ -578,7 +584,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         }
         // Fix resolution to 1920 * 1080
         self.session.sessionPreset = AVCaptureSessionPreset1920x1080;
-        
+
         AVCaptureStillImageOutput *stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
         if ([self.session canAddOutput:stillImageOutput]) {
             stillImageOutput.outputSettings = @{AVVideoCodecKey : AVVideoCodecJPEG};
@@ -904,8 +910,8 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     [_faceDetectorManager maybeStartFaceDetectionOnSession:_session withPreviewLayer:_previewLayer];
 #endif
 
-    if (self.session.sessionPreset != AVCaptureSessionPresetPhoto) {
-        [self updateSessionPreset:AVCaptureSessionPresetPhoto];
+    if (self.session.sessionPreset != AVCaptureSessionPreset1920x1080) {
+        [self updateSessionPreset:AVCaptureSessionPreset1920x1080];
     }
 }
 
