@@ -40,7 +40,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 #if !(TARGET_IPHONE_SIMULATOR)
         self.previewLayer =
         [AVCaptureVideoPreviewLayer layerWithSession:self.session];
-        self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspect;
+        self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
         self.previewLayer.needsDisplayOnBoundsChange = YES;
 #endif
         self.paused = NO;
@@ -48,9 +48,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         [self initializeCaptureSessionInput];
         [self startSession];
         [[NSNotificationCenter defaultCenter] addObserver:self
-                                                selector:@selector(orientationChanged:)
-                                                name:UIDeviceOrientationDidChangeNotification
-                                                object:nil];
+                                                 selector:@selector(orientationChanged:)
+                                                     name:UIDeviceOrientationDidChangeNotification
+                                                   object:nil];
         self.autoFocus = -1;
         //        [[NSNotificationCenter defaultCenter] addObserver:self
         //                                                 selector:@selector(bridgeDidForeground:)
@@ -418,12 +418,27 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
             UIImage *takenImage = [UIImage imageWithData:imageData];
 
-            CGSize size = CGSizeMake(takenImage.size.width, takenImage.size.height);
-            UIGraphicsBeginImageContextWithOptions(size, NO, 1.0);
-            [takenImage drawInRect:CGRectMake(0, 0, size.width, size.height)];
-            UIImage *newImage = UIGraphicsGetImageFromCurrentImageContext();
-            UIGraphicsEndImageContext();
-            takenImage = [UIImage imageWithCGImage:[newImage CGImage]  scale:1.0 orientation:(newImage.imageOrientation)];
+            CGImageRef takenCGImage = takenImage.CGImage;
+            CGSize previewSize;
+            if (UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation])) {
+                previewSize = CGSizeMake(strongSelf.previewLayer.frame.size.height, strongSelf.previewLayer.frame.size.width);
+            } else {
+                previewSize = CGSizeMake(strongSelf.previewLayer.frame.size.width, strongSelf.previewLayer.frame.size.height);
+            }
+            CGRect cropRect = CGRectMake(0, 0, CGImageGetWidth(takenCGImage), CGImageGetHeight(takenCGImage));
+            CGRect croppedSize = AVMakeRectWithAspectRatioInsideRect(previewSize, cropRect);
+            takenImage = [RNImageUtils cropImage:takenImage toRect:croppedSize];
+
+            if ([options[@"mirrorImage"] boolValue]) {
+                takenImage = [RNImageUtils mirrorImage:takenImage];
+            }
+            if ([options[@"forceUpOrientation"] boolValue]) {
+                takenImage = [RNImageUtils forceUpOrientation:takenImage];
+            }
+
+            if ([options[@"width"] integerValue]) {
+                takenImage = [RNImageUtils scaleImage:takenImage toWidth:[options[@"width"] integerValue]];
+            }
 
             NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
             float quality = [options[@"quality"] floatValue];
@@ -493,7 +508,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     }
 
     if (self.movieFileOutput == nil || self.movieFileOutput.isRecording || _videoRecordedResolve != nil || _videoRecordedReject != nil) {
-        return;
+      return;
     }
 
     if (options[@"maxDuration"]) {
@@ -515,17 +530,17 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     [connection setVideoOrientation:[RNCameraUtils videoOrientationForDeviceOrientation:[[UIDevice currentDevice] orientation]]];
 
     if (options[@"codec"]) {
-        AVVideoCodecType videoCodecType = options[@"codec"];
-        if (@available(iOS 10, *)) {
-            if ([self.movieFileOutput.availableVideoCodecTypes containsObject:videoCodecType]) {
-                [self.movieFileOutput setOutputSettings:@{AVVideoCodecKey:videoCodecType} forConnection:connection];
-                self.videoCodecType = videoCodecType;
-            } else {
-                RCTLogWarn(@"%s: Video Codec '%@' is not supported on this device.", __func__, videoCodecType);
-            }
+      AVVideoCodecType videoCodecType = options[@"codec"];
+      if (@available(iOS 10, *)) {
+        if ([self.movieFileOutput.availableVideoCodecTypes containsObject:videoCodecType]) {
+          [self.movieFileOutput setOutputSettings:@{AVVideoCodecKey:videoCodecType} forConnection:connection];
+          self.videoCodecType = videoCodecType;
         } else {
-            RCTLogWarn(@"%s: Setting videoCodec is only supported above iOS version 10.", __func__);
+          RCTLogWarn(@"%s: Video Codec '%@' is not supported on this device.", __func__, videoCodecType);
         }
+      } else {
+        RCTLogWarn(@"%s: Setting videoCodec is only supported above iOS version 10.", __func__);
+      }
     }
 
     dispatch_async(self.sessionQueue, ^{
@@ -823,19 +838,19 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
                 if ([metadata.type isEqualToString:barcodeType]) {
                     AVMetadataMachineReadableCodeObject *transformed = (AVMetadataMachineReadableCodeObject *)[_previewLayer transformedMetadataObjectForMetadataObject:metadata];
                     NSDictionary *event = @{
-                    @"type" : codeMetadata.type,
-                    @"data" : codeMetadata.stringValue,
-                    @"bounds": @{
-                            @"origin": @{
-                                    @"x": [NSString stringWithFormat:@"%f", transformed.bounds.origin.x],
-                                    @"y": [NSString stringWithFormat:@"%f", transformed.bounds.origin.y]
-                                    },
-                            @"size": @{
-                                    @"height": [NSString stringWithFormat:@"%f", transformed.bounds.size.height],
-                                    @"width": [NSString stringWithFormat:@"%f", transformed.bounds.size.width]
-                                    }
-                            }
-                    };
+                                            @"type" : codeMetadata.type,
+                                            @"data" : codeMetadata.stringValue,
+                                            @"bounds": @{
+                                                @"origin": @{
+                                                    @"x": [NSString stringWithFormat:@"%f", transformed.bounds.origin.x],
+                                                    @"y": [NSString stringWithFormat:@"%f", transformed.bounds.origin.y]
+                                                },
+                                                @"size": @{
+                                                    @"height": [NSString stringWithFormat:@"%f", transformed.bounds.size.height],
+                                                    @"width": [NSString stringWithFormat:@"%f", transformed.bounds.size.width]
+                                                }
+                                            }
+                                            };
 
                     [self onCodeRead:event];
                 }
@@ -874,12 +889,12 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         }
     }
     if (success && self.videoRecordedResolve != nil) {
-        AVVideoCodecType videoCodec = self.videoCodecType;
-        if (videoCodec == nil) {
-            videoCodec = [self.movieFileOutput.availableVideoCodecTypes firstObject];
-        }
+      AVVideoCodecType videoCodec = self.videoCodecType;
+      if (videoCodec == nil) {
+        videoCodec = [self.movieFileOutput.availableVideoCodecTypes firstObject];
+      }
 
-        self.videoRecordedResolve(@{ @"uri": outputFileURL.absoluteString, @"codec":videoCodec });
+      self.videoRecordedResolve(@{ @"uri": outputFileURL.absoluteString, @"codec":videoCodec });
     } else if (self.videoRecordedReject != nil) {
         self.videoRecordedReject(@"E_RECORDING_FAILED", @"An error occurred while recording a video.", error);
     }
@@ -921,7 +936,10 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 - (void)onFacesDetected:(NSArray<NSDictionary *> *)faces
 {
     if (_onFacesDetected) {
-        _onFacesDetected(@{ @"type": @"face", @"faces": faces});
+        _onFacesDetected(@{
+                           @"type": @"face",
+                           @"faces": faces
+                           });
     }
 }
 
