@@ -582,8 +582,8 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         if (self.presetCamera == AVCaptureDevicePositionUnspecified) {
             return;
         }
-        // Fix resolution to 1920 * 1080
-        self.session.sessionPreset = AVCaptureSessionPreset1920x1080;
+        // // Fix resolution to 1920 * 1080
+        // self.session.sessionPreset = AVCaptureSessionPreset1920x1080;
 
         AVCaptureStillImageOutput *stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
         if ([self.session canAddOutput:stillImageOutput]) {
@@ -705,6 +705,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             [self.session beginConfiguration];
             if ([self.session canSetSessionPreset:preset]) {
                 self.session.sessionPreset = preset;
+                RCTLog(@"Set session-preset to %@", preset);
+            } else {
+                RCTLog(@"Failed to set session-preset - %@", preset);
             }
             [self.session commitConfiguration];
         });
@@ -910,9 +913,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     [_faceDetectorManager maybeStartFaceDetectionOnSession:_session withPreviewLayer:_previewLayer];
 #endif
 
-    if (self.session.sessionPreset != AVCaptureSessionPreset1920x1080) {
-        [self updateSessionPreset:AVCaptureSessionPreset1920x1080];
-    }
+    // if (self.session.sessionPreset != AVCaptureSessionPreset1920x1080) {
+    //     [self updateSessionPreset:AVCaptureSessionPreset1920x1080];
+    // }
 }
 
 # pragma mark - Face detector
