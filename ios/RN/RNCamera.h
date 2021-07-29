@@ -16,7 +16,8 @@
 @property(nonatomic, strong) dispatch_queue_t sessionQueue;
 @property(nonatomic, strong) AVCaptureSession *session;
 @property(nonatomic, strong) AVCaptureDeviceInput *videoCaptureDeviceInput;
-@property(nonatomic, strong) AVCaptureStillImageOutput *stillImageOutput;
+// @property(nonatomic, strong) AVCaptureStillImageOutput *stillImageOutput;
+@property(nonatomic, strong) AVCapturePhotoOutput *photoOutput;
 @property(nonatomic, strong) AVCaptureMovieFileOutput *movieFileOutput;
 @property(nonatomic, strong) AVCaptureMetadataOutput *metadataOutput;
 @property(nonatomic, strong) id runtimeErrorHandlingObserver;
@@ -66,4 +67,3 @@
 - (void)onPictureSaved:(NSDictionary *)event;
 
 @end
-
