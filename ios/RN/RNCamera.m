@@ -391,8 +391,8 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 //    } else {
 //        orientation = [RNCameraUtils videoOrientationForDeviceOrientation:[[UIDevice currentDevice] orientation]];
 //    }
-    RCTLog(@"takePicture ---------START");
 
+    RCTLog(@"takePicture ---------START");
     RCTLog(@"takePicture device iso %f", device.ISO);
     RCTLog(@"takePicture device duration %f", CMTimeGetSeconds(device.exposureDuration));
     RCTLog(@"takePicture device bias %f", device.exposureTargetBias);
@@ -402,7 +402,10 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     RCTLog(@"takePicture device B gain %f", device.deviceWhiteBalanceGains.blueGain);
     RCTLog(@"takePicture device wb mode %ld", device.whiteBalanceMode);
     RCTLog(@"takePicture device mode %ld", device.exposureMode);
-
+    RCTLog(@"takePicture pictureSize: %@", self.pictureSize);
+    RCTLog(@"takePicture adjustingExposure: %@", device.isAdjustingExposure ? @"TRUE" : @"FALSE");
+    RCTLog(@"takePicture adjustingWhiteBalance: %@", device.isAdjustingWhiteBalance ? @"TRUE" : @"FALSE");
+    RCTLog(@"takePicture adjustingFocus: %@", device.isAdjustingFocus ? @"TRUE" : @"FALSE");
     RCTLog(@"takePicture ---------END");
 
     __weak typeof(self) weakSelf = self;
@@ -439,6 +442,18 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             if ([options[@"width"] integerValue]) {
                 takenImage = [RNImageUtils scaleImage:takenImage toWidth:[options[@"width"] integerValue]];
             }
+
+
+            // dump EXIF
+            CFDictionaryRef exifAttachments = CMGetAttachment( imageSampleBuffer, kCGImagePropertyExifDictionary, NULL);
+            if (exifAttachments) {
+              // Do something with the attachments.
+              NSLog(@"attachements: %@", exifAttachments);
+
+            } else {
+              NSLog(@"no attachments");
+            }
+
 
             NSMutableDictionary *response = [[NSMutableDictionary alloc] init];
             float quality = [options[@"quality"] floatValue];
@@ -584,12 +599,14 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         }
         // // Fix resolution to 1920 * 1080
         // self.session.sessionPreset = AVCaptureSessionPreset1920x1080;
+        // self.session.sessionPreset = AVCaptureSessionPresetPhoto;
 
+        // still image output
         AVCaptureStillImageOutput *stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
         if ([self.session canAddOutput:stillImageOutput]) {
             stillImageOutput.outputSettings = @{AVVideoCodecKey : AVVideoCodecJPEG};
             [self.session addOutput:stillImageOutput];
-//            [stillImageOutput setHighResolutionStillImageOutputEnabled:YES];
+            // [stillImageOutput setHighResolutionStillImageOutputEnabled:YES];
             self.stillImageOutput = stillImageOutput;
         }
 
@@ -682,10 +699,16 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             [self updateFocusMode];
             [self updateFocusDepth];
             [self updateWhiteBalance];
+            [self updatePictureSize];
             [self updateExposure];
             [self.previewLayer.connection setVideoOrientation:orientation];
             [self _updateMetadataObjectsToRecognize];
         }
+
+        // // update settings again, after it is ready.
+        // dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1000 * NSEC_PER_MSEC)), self.sessionQueue, ^{;
+        //     [self updateExposure];
+        // });
 
         [self.session commitConfiguration];
     });
@@ -752,7 +775,6 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
 - (void)bridgeDidForeground:(NSNotification *)notification
 {
-
     if (![self.session isRunning] && [self isSessionPaused]) {
         self.paused = NO;
         dispatch_async( self.sessionQueue, ^{
