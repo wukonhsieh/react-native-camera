@@ -11,6 +11,7 @@
 		4107014D1ACB732B00C6AA39 /* RCTCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = 410701481ACB732B00C6AA39 /* RCTCamera.m */; };
 		4107014E1ACB732B00C6AA39 /* RCTCameraManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 4107014A1ACB732B00C6AA39 /* RCTCameraManager.m */; };
 		454EBCF41B5082DC00AD0F86 /* NSMutableDictionary+ImageMetadata.m in Sources */ = {isa = PBXBuildFile; fileRef = 454EBCF31B5082DC00AD0F86 /* NSMutableDictionary+ImageMetadata.m */; };
+		6BA160152716FBD0008BBD60 /* RNPhotoCaptureDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6BA160132716FBD0008BBD60 /* RNPhotoCaptureDelegate.m */; };
 		7103647B20195C53009691D1 /* RNFaceDetectorManagerStub.m in Sources */ = {isa = PBXBuildFile; fileRef = 7103647A20195C53009691D1 /* RNFaceDetectorManagerStub.m */; };
 		7162BE672013EAA100FE51FF /* RNCamera.m in Sources */ = {isa = PBXBuildFile; fileRef = 71C7FFCC2013C7BF006EB75A /* RNCamera.m */; };
 		7162BE682013EAA400FE51FF /* RNCameraManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 71C7FFC92013C7AE006EB75A /* RNCameraManager.m */; };
@@ -46,6 +47,8 @@
 		410701491ACB732B00C6AA39 /* RCTCameraManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RCTCameraManager.h; sourceTree = "<group>"; };
 		4107014A1ACB732B00C6AA39 /* RCTCameraManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RCTCameraManager.m; sourceTree = "<group>"; };
 		454EBCF31B5082DC00AD0F86 /* NSMutableDictionary+ImageMetadata.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSMutableDictionary+ImageMetadata.m"; sourceTree = "<group>"; };
+		6BA160132716FBD0008BBD60 /* RNPhotoCaptureDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RNPhotoCaptureDelegate.m; sourceTree = "<group>"; };
+		6BA160142716FBD0008BBD60 /* RNPhotoCaptureDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RNPhotoCaptureDelegate.h; sourceTree = "<group>"; };
 		7103647920195C53009691D1 /* RNFaceDetectorManagerStub.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNFaceDetectorManagerStub.h; sourceTree = "<group>"; };
 		7103647A20195C53009691D1 /* RNFaceDetectorManagerStub.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RNFaceDetectorManagerStub.m; sourceTree = "<group>"; };
 		7147DBB12015319E003C59C3 /* RNFaceDetectorManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RNFaceDetectorManager.h; sourceTree = "<group>"; };
@@ -120,6 +123,8 @@
 		714166162013E1B600EE9FCC /* RN */ = {
 			isa = PBXGroup;
 			children = (
+				6BA160142716FBD0008BBD60 /* RNPhotoCaptureDelegate.h */,
+				6BA160132716FBD0008BBD60 /* RNPhotoCaptureDelegate.m */,
 				71C7FFD42013C824006EB75A /* RNFileSystem.h */,
 				71C7FFD52013C824006EB75A /* RNFileSystem.m */,
 				71C7FFD12013C817006EB75A /* RNImageUtils.h */,
@@ -191,6 +196,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 410701241ACB719800C6AA39;
@@ -215,6 +221,7 @@
 				71D5C729201B8A2D0030A15E /* RNFaceDetectorUtils.m in Sources */,
 				4107014E1ACB732B00C6AA39 /* RCTCameraManager.m in Sources */,
 				71D5C72C201B8A360030A15E /* RNFaceDetectorManager.m in Sources */,
+				6BA160152716FBD0008BBD60 /* RNPhotoCaptureDelegate.m in Sources */,
 				7103647B20195C53009691D1 /* RNFaceDetectorManagerStub.m in Sources */,
 				4107014D1ACB732B00C6AA39 /* RCTCamera.m in Sources */,
 				71D5C72A201B8A2F0030A15E /* RNFaceDetectorPointTransformCalculator.m in Sources */,
