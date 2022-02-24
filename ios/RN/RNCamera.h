@@ -25,6 +25,7 @@
 @property(nonatomic, strong) NSArray *barCodeTypes;
 
 @property(nonatomic, assign) NSInteger presetCamera;
+@property(nonatomic, assign) NSInteger lensMode; // single camera / multiple cameras
 @property (assign, nonatomic) NSInteger flashMode;
 @property (assign, nonatomic) NSInteger exposure;
 @property (assign, nonatomic) NSInteger iso;
@@ -42,6 +43,7 @@
 
 - (id)initWithBridge:(RCTBridge *)bridge;
 - (void)updateType;
+- (void)updateLensMode;
 - (void)updateFlashMode;
 - (void)updateFocusMode;
 - (void)updateFocusDepth;
@@ -65,5 +67,6 @@
 - (void)onCodeRead:(NSDictionary *)event;
 - (void)onFacesDetected:(NSDictionary *)event;
 - (void)onPictureSaved:(NSDictionary *)event;
+- (void)onStateChanged:(NSDictionary *)event;
 
 @end

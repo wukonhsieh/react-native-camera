@@ -17,6 +17,7 @@ RCT_EXPORT_VIEW_PROPERTY(onMountError, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onBarCodeRead, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onFacesDetected, RCTDirectEventBlock);
 RCT_EXPORT_VIEW_PROPERTY(onPictureSaved, RCTDirectEventBlock);
+RCT_EXPORT_VIEW_PROPERTY(onStateChanged, RCTDirectEventBlock);
 
 + (BOOL)requiresMainQueueSetup
 {
@@ -33,6 +34,8 @@ RCT_EXPORT_VIEW_PROPERTY(onPictureSaved, RCTDirectEventBlock);
     return @{
              @"Type" :
                  @{@"front" : @(RNCameraTypeFront), @"back" : @(RNCameraTypeBack)},
+             @"LensMode" :
+                 @{@"single" : @(RNCameraLensModeSingle), @"multiple" : @(RNCameraLensModeMultiple)},
              @"FlashMode" : @{
                      @"off" : @(RNCameraFlashModeOff),
                      @"on" : @(RNCameraFlashModeOn),
@@ -79,7 +82,7 @@ RCT_EXPORT_VIEW_PROPERTY(onPictureSaved, RCTDirectEventBlock);
 
 - (NSArray<NSString *> *)supportedEvents
 {
-    return @[@"onCameraReady", @"onMountError", @"onBarCodeRead", @"onFacesDetected", @"onPictureSaved"];
+    return @[@"onCameraReady", @"onMountError", @"onBarCodeRead", @"onFacesDetected", @"onPictureSaved", @"onStateChanged"];
 }
 
 + (NSDictionary *)validCodecTypes
@@ -152,6 +155,14 @@ RCT_CUSTOM_VIEW_PROPERTY(type, NSInteger, RNCamera)
     if (view.presetCamera != [RCTConvert NSInteger:json]) {
         [view setPresetCamera:[RCTConvert NSInteger:json]];
         [view updateType];
+    }
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(lensMode, NSInteger, RNCamera)
+{
+    if (view.lensMode != [RCTConvert NSInteger:json]) {
+        [view setLensMode:[RCTConvert NSInteger:json]];
+        [view updateLensMode];
     }
 }
 

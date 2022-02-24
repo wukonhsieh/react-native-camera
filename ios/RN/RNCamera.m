@@ -14,7 +14,7 @@
 @property (nonatomic, weak) RCTBridge *bridge;
 
 @property (nonatomic, assign, getter=isSessionPaused) BOOL paused;
-
+@property (nonatomic, assign) BOOL hasUltraWildLen;
 @property (nonatomic, strong) RCTPromiseResolveBlock videoRecordedResolve;
 @property (nonatomic, strong) RCTPromiseRejectBlock videoRecordedReject;
 @property (nonatomic, strong) id faceDetectorManager;
@@ -24,6 +24,7 @@
 @property (nonatomic, copy) RCTDirectEventBlock onBarCodeRead;
 @property (nonatomic, copy) RCTDirectEventBlock onFacesDetected;
 @property (nonatomic, copy) RCTDirectEventBlock onPictureSaved;
+@property (nonatomic, copy) RCTDirectEventBlock onStateChanged;
 
 @property (nonatomic) NSMutableDictionary<NSNumber *, RNPhotoCaptureDelegate *> *inProgressPhotoCaptureDelegates;
 @end
@@ -46,6 +47,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         self.previewLayer.needsDisplayOnBoundsChange = YES;
 #endif
         self.paused = NO;
+        self.hasUltraWildLen = NO;
         [self changePreviewOrientation:[UIApplication sharedApplication].statusBarOrientation];
         [self initializeCaptureSessionInput];
         [self startSession];
@@ -96,6 +98,13 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     }
 }
 
+- (void)onStateChanged:(NSDictionary *)event
+{
+    if (_onStateChanged) {
+        _onStateChanged(event);
+    }
+}
+
 - (void)layoutSubviews
 {
     [super layoutSubviews];
@@ -120,6 +129,25 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
 - (void)removeFromSuperview
 {
+    RCTLog(@"=== removeFromSuperview ===");
+    if (self.videoCaptureDeviceInput != nil) {
+      AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+      if (device != nil) {
+        RCTLog(@"=== clear observers ===");
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"videoZoomFactor"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"whiteBalanceMode"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"deviceWhiteBalanceGains"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"ISO"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureMode"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureDuration"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureTargetBias"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureTargetOffset"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"focusMode"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"lensPosition"];
+        [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"isAdjustingFocus"];
+      }
+    }
+
     [self stopSession];
     [super removeFromSuperview];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
@@ -127,6 +155,18 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
 -(void)updateType
 {
+    RCTLog(@"=== updateType ===");
+    dispatch_async(self.sessionQueue, ^{
+        [self initializeCaptureSessionInput];
+        if (!self.session.isRunning) {
+            [self startSession];
+        }
+    });
+}
+
+-(void)updateLensMode
+{
+    RCTLog(@"=== updateLensMode ===");
     dispatch_async(self.sessionQueue, ^{
         [self initializeCaptureSessionInput];
         if (!self.session.isRunning) {
@@ -137,6 +177,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
 - (void)updateFlashMode
 {
+    RCTLog(@"=== updateFlashMode ===");
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
 
@@ -193,6 +234,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
 - (void)updateFocusMode
 {
+    RCTLog(@"=== updateFocusMode ===");
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
 
@@ -218,10 +260,15 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
 - (void)updateFocusDepth
 {
+    RCTLog(@"=== updateFocusDepth ===");
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
 
     if (device == nil || self.autoFocus < 0 || device.focusMode != RNCameraAutoFocusOff || device.position == RNCameraTypeFront) {
+        return;
+    }
+
+    if (self.lensMode > 0) {
         return;
     }
 
@@ -248,6 +295,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
  */
 - (void)updateExposure
 {
+    RCTLog(@"=== updateExposure ===");
     if (self.exposure != RNCameraExposureCustom) {
         return;
     }
@@ -258,6 +306,10 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 
     CMTime duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
     float iso = self.iso;
+
+    if (![device isExposureModeSupported: AVCaptureExposureModeCustom]) {
+      return;
+    }
 
     if (![device lockForConfiguration:&error]) {
         if (error) {
@@ -274,6 +326,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 }
 
 - (void)updateZoom {
+    RCTLog(@"=== updateZoom ===");
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
 
@@ -284,13 +337,18 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         return;
     }
 
-    device.videoZoomFactor = (device.activeFormat.videoMaxZoomFactor - 1.0) * self.zoom + 1.0;
-
+    // if has ultrawild len, and using multiple cameras mode
+    if (self.lensMode == 1 && self.hasUltraWildLen) {
+      device.videoZoomFactor = (device.activeFormat.videoMaxZoomFactor - 2.0) * self.zoom + 2.0;
+    } else {
+      device.videoZoomFactor = (device.activeFormat.videoMaxZoomFactor - 1.0) * self.zoom + 1.0;
+    }
     [device unlockForConfiguration];
 }
 
 - (void)updateWhiteBalance
 {
+    RCTLog(@"=== updateWhiteBalance ===");
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
 
@@ -305,6 +363,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         [device setWhiteBalanceMode:AVCaptureWhiteBalanceModeContinuousAutoWhiteBalance];
         [device unlockForConfiguration];
     } else {
+        if (!device.isLockingWhiteBalanceWithCustomDeviceGainsSupported) {
+          return;
+        }
         __weak __typeof__(device) weakDevice = device;
         if (self.whiteBalance == RNCameraWhiteBalanceCustom) {
             AVCaptureWhiteBalanceTemperatureAndTintValues temperatureAndTint = {
@@ -460,12 +521,13 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     RCTLog(@"takePicture adjustingExposure: %@", device.isAdjustingExposure ? @"TRUE" : @"FALSE");
     RCTLog(@"takePicture adjustingWhiteBalance: %@", device.isAdjustingWhiteBalance ? @"TRUE" : @"FALSE");
     RCTLog(@"takePicture adjustingFocus: %@", device.isAdjustingFocus ? @"TRUE" : @"FALSE");
+    RCTLog(@"takePicture lensPosition: %f", device.lensPosition);
     RCTLog(@"takePicture ---------END");
-
 
     // new APIs
     __weak typeof(self) weakSelf = self;
     RNCamera* strongSelf = weakSelf;
+
     AVCapturePhotoSettings *settings = [self currentPhotoSettings];
     // Use a separate object for the photo capture delegate to isolate each capture life cycle.
     RNPhotoCaptureDelegate *photoCaptureDelegate = [[RNPhotoCaptureDelegate alloc] initWithRequestedPhotoSettings:settings willCapturePhotoAnimation:^{
@@ -834,6 +896,32 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     });
 }
 
+- (void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey, id> *)change  context: (void *)context
+{
+  __weak typeof(self) weakSelf = self;
+  RNCamera* strongSelf = weakSelf;
+  if (keyPath == @"deviceWhiteBalanceGains") {
+    AVCaptureWhiteBalanceGains *wb = (__bridge AVCaptureWhiteBalanceGains*)[change objectForKey:NSKeyValueChangeNewKey];
+    [strongSelf onStateChanged:@{
+      @"redGain": @(wb->redGain),
+      @"greenGain": @(wb->greenGain),
+      @"blueGain": @(wb->blueGain)
+    }];
+  } else if (keyPath == @"ISO") {
+    [strongSelf onStateChanged:@{
+      @"iso": [change objectForKey:NSKeyValueChangeNewKey]
+    }];
+  } else if (keyPath == @"exposureDuration") {
+    [strongSelf onStateChanged:@{
+      @"duration": [change objectForKey:NSKeyValueChangeNewKey]
+    }];
+  } else {
+    [strongSelf onStateChanged:@{
+      keyPath: [change objectForKey:NSKeyValueChangeNewKey]
+    }];
+  }
+}
+
 - (void)initializeCaptureSessionInput
 {
     if (self.videoCaptureDeviceInput.device.position == self.presetCamera) {
@@ -855,7 +943,31 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         [self.session beginConfiguration];
 
         NSError *error = nil;
-        AVCaptureDevice *captureDevice = [RNCameraUtils deviceWithMediaType:AVMediaTypeVideo preferringPosition:self.presetCamera];
+        AVCaptureDevice *captureDevice;
+        if (self.lensMode == 0) {
+          // default use single camera
+          captureDevice = [RNCameraUtils deviceWithMediaType:AVMediaTypeVideo preferringPosition:self.presetCamera];
+
+        } else {
+          self.hasUltraWildLen = NO;
+          AVCaptureDeviceDiscoverySession *session = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[
+            AVCaptureDeviceTypeBuiltInUltraWideCamera
+          ] mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
+          if ([session.devices count] > 0) {
+            self.hasUltraWildLen = YES;
+          }
+
+          // use multiple camera if supports
+          NSArray<AVCaptureDeviceType>* deviceTypes = @[
+            AVCaptureDeviceTypeBuiltInTripleCamera,
+            AVCaptureDeviceTypeBuiltInDualCamera,
+            AVCaptureDeviceTypeBuiltInDualWideCamera,
+            AVCaptureDeviceTypeBuiltInWideAngleCamera,
+            AVCaptureDeviceTypeBuiltInTrueDepthCamera
+          ];
+          AVCaptureDeviceDiscoverySession *backVideoDeviceDiscoverySession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:deviceTypes mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionUnspecified];
+          captureDevice = backVideoDeviceDiscoverySession.devices.firstObject;
+        }
         AVCaptureDeviceInput *captureDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
 
         if (error || captureDeviceInput == nil) {
@@ -867,7 +979,27 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         if ([self.session canAddInput:captureDeviceInput]) {
             [self.session addInput:captureDeviceInput];
 
+            // clear old observer
+            if (self.videoCaptureDeviceInput != nil) {
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"videoZoomFactor"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"whiteBalanceMode"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"deviceWhiteBalanceGains"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"ISO"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureMode"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureDuration"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureTargetBias"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"exposureTargetOffset"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"focusMode"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"lensPosition"];
+              [[self.videoCaptureDeviceInput device] removeObserver:self forKeyPath:@"isAdjustingFocus"];
+            }
+
             self.videoCaptureDeviceInput = captureDeviceInput;
+            AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+            if (device == nil) {
+              RCTLog(@"device is null!!!!!");
+            }
+
             [self updateFlashMode];
             [self updateZoom];
             [self updateFocusMode];
@@ -877,6 +1009,21 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             [self updateExposure];
             [self.previewLayer.connection setVideoOrientation:orientation];
             [self _updateMetadataObjectsToRecognize];
+
+            // monitor properties changes
+            if (device != nil) {
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"videoZoomFactor" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"whiteBalanceMode" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"deviceWhiteBalanceGains" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"ISO" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"exposureMode" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"exposureDuration" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"exposureTargetBias" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"exposureTargetOffset" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"focusMode" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"lensPosition" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+              [[self.videoCaptureDeviceInput device] addObserver:self forKeyPath:@"isAdjustingFocus" options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:NULL];
+            }
         }
 
         // // update settings again, after it is ready.

@@ -84,9 +84,11 @@ type PropsType = typeof View.props & {
   temperature?: number,
   tint?: number,
   type?: number | string,
+  lensMode?: number | string,
   onCameraReady?: Function,
   onBarCodeRead?: Function,
   onPictureSaved?: Function,
+  onStateChanged?: Function,
   onGoogleVisionBarcodesDetected?: Function,
   faceDetectionMode?: number,
   flashMode?: number | string,
@@ -152,6 +154,7 @@ const EventThrottleMs = 500;
 export default class Camera extends React.Component<PropsType, StateType> {
   static Constants = {
     Type: CameraManager.Type,
+    LensMode: CameraManager.LensMode,
     FlashMode: CameraManager.FlashMode,
     AutoFocus: CameraManager.AutoFocus,
     WhiteBalance: CameraManager.WhiteBalance,
@@ -168,6 +171,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
   // Values under keys from this object will be transformed to native options
   static ConversionTables = {
     type: CameraManager.Type,
+    lensMode: CameraManager.LensMode,
     flashMode: CameraManager.FlashMode,
     autoFocus: CameraManager.AutoFocus,
     whiteBalance: CameraManager.WhiteBalance,
@@ -191,6 +195,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
     onCameraReady: PropTypes.func,
     onBarCodeRead: PropTypes.func,
     onPictureSaved: PropTypes.func,
+    onStateChanged: PropTypes.func,
     onGoogleVisionBarcodesDetected: PropTypes.func,
     onFacesDetected: PropTypes.func,
     onTextRecognized: PropTypes.func,
@@ -200,6 +205,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
     barCodeTypes: PropTypes.arrayOf(PropTypes.string),
     googleVisionBarcodeType: PropTypes.number,
     type: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    lensMode: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     flashMode: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     whiteBalance: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     exposure: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -220,6 +226,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
     focusDepth: 0,
     type: CameraManager.Type.back,
     autoFocus: CameraManager.AutoFocus.on,
+    lensMode: CameraManager.LensMode.single,
     flashMode: CameraManager.FlashMode.off,
     whiteBalance: CameraManager.WhiteBalance.auto,
     exposure: CameraManager.Exposure.auto,
@@ -259,6 +266,9 @@ export default class Camera extends React.Component<PropsType, StateType> {
     this.state = {
       isAuthorized: false,
       isAuthorizationChecked: false,
+      iso: -1,
+      duration: -1,
+      exposureTargetOffset: -1,
     };
   }
 
@@ -321,6 +331,13 @@ export default class Camera extends React.Component<PropsType, StateType> {
       this.props.onPictureSaved(nativeEvent);
     }
   };
+
+  _onStateChanged = ({ nativeEvent }) => {
+    const obj = Object.keys(nativeEvent)
+                      .filter((k) => { return k != 'target'; })
+                      .reduce((arr, k) => {arr[k] = nativeEvent[k]; return arr;}, {} );
+    this.setState(obj);
+  }
 
   _onObjectDetected = (callback: ?Function) => ({ nativeEvent }: EventCallbackArgumentsType) => {
     const { type } = nativeEvent;
@@ -397,6 +414,7 @@ export default class Camera extends React.Component<PropsType, StateType> {
           onFacesDetected={this._onObjectDetected(this.props.onFacesDetected)}
           onTextRecognized={this._onObjectDetected(this.props.onTextRecognized)}
           onPictureSaved={this._onPictureSaved}
+          onStateChanged={(obj)=>{this._onStateChanged.call(this, obj)}}
         >
           {this.renderChildren()}
         </RNCamera>
@@ -462,6 +480,7 @@ const RNCamera = requireNativeComponent('RNCamera', Camera, {
     onGoogleVisionBarcodesDetected: true,
     onCameraReady: true,
     onPictureSaved: true,
+    onStateChanged: true,
     onFaceDetected: true,
     onLayout: true,
     onMountError: true,

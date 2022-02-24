@@ -11,6 +11,11 @@ typedef NS_ENUM(NSInteger, RNCameraType) {
     RNCameraTypeBack = AVCaptureDevicePositionBack
 };
 
+typedef NS_ENUM(NSInteger, RNCameraLensMode) {
+    RNCameraLensModeSingle = 0,
+    RNCameraLensModeMultiple = 1,
+};
+
 typedef NS_ENUM(NSInteger, RNCameraFlashMode) {
     RNCameraFlashModeOff = AVCaptureFlashModeOff,
     RNCameraFlashModeOn = AVCaptureFlashModeOn,
@@ -62,4 +67,3 @@ typedef NS_ENUM(NSInteger, RNCameraVideoResolution) {
 + (NSDictionary *)validCodecTypes;
 
 @end
-
