@@ -184,6 +184,26 @@ RCT_CUSTOM_VIEW_PROPERTY(focusDepth, NSNumber, RNCamera)
     [view updateFocusDepth];
 }
 
+RCT_CUSTOM_VIEW_PROPERTY(focusX, NSNumber, RNCamera)
+{
+    if (view.focusX && view.focusX != [RCTConvert float:json]) {
+        [view setFocusX:[RCTConvert float:json]];
+        [view updateFocusPoint];
+        [view updateExposure];
+        [view updateWhiteBalance];
+    }
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(focusY, NSNumber, RNCamera)
+{
+    if (view.focusY && view.focusY != [RCTConvert float:json]) {
+        [view setFocusY:[RCTConvert float:json]];
+        [view updateFocusPoint];
+        [view updateExposure];
+        [view updateWhiteBalance];
+    }
+}
+
 RCT_CUSTOM_VIEW_PROPERTY(zoom, NSNumber, RNCamera)
 {
     [view setZoom:[RCTConvert CGFloat:json]];
@@ -206,6 +226,14 @@ RCT_CUSTOM_VIEW_PROPERTY(duration, NSNumber, RNCamera)
 {
     [view setDuration:[RCTConvert float:json]];
     [view updateExposure];
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(exposureBias, NSInteger, RNCamera)
+{
+    if (view.exposureBias != [RCTConvert float:json]) {
+        [view setExposureBias:[RCTConvert float:json]];
+        [view updateExposureBias];
+    }
 }
 
 RCT_CUSTOM_VIEW_PROPERTY(whiteBalance, NSInteger, RNCamera)

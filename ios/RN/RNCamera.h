@@ -29,10 +29,13 @@
 @property (assign, nonatomic) NSInteger flashMode;
 @property (assign, nonatomic) NSInteger exposure;
 @property (assign, nonatomic) NSInteger iso;
+@property (assign, nonatomic) float exposureBias;
 @property (assign, nonatomic) float duration;
 @property (assign, nonatomic) CGFloat zoom;
 @property (assign, nonatomic) NSInteger autoFocus;
 @property (assign, nonatomic) float focusDepth;
+@property (assign, nonatomic) float focusX;
+@property (assign, nonatomic) float focusY;
 @property (assign, nonatomic) NSInteger whiteBalance;
 @property (assign, nonatomic) NSInteger temperature;
 @property (assign, nonatomic) NSInteger tint;
@@ -47,7 +50,9 @@
 - (void)updateFlashMode;
 - (void)updateFocusMode;
 - (void)updateFocusDepth;
+- (void)updateFocusPoint;
 - (void)updateExposure;
+- (void)updateExposureBias;
 - (void)updateZoom;
 - (void)updateWhiteBalance;
 - (void)updatePictureSize;

@@ -56,6 +56,9 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
                                                      name:UIDeviceOrientationDidChangeNotification
                                                    object:nil];
         self.autoFocus = -1;
+        self.focusX = 0.0;
+        self.focusY = 0.0;
+        self.exposureBias = 0.0;
         //        [[NSNotificationCenter defaultCenter] addObserver:self
         //                                                 selector:@selector(bridgeDidForeground:)
         //                                                     name:EX_UNVERSIONED(@"EXKernelBridgeDidForegroundNotification")
@@ -151,6 +154,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     [self stopSession];
     [super removeFromSuperview];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+    self.videoCaptureDeviceInput = nil;
 }
 
 -(void)updateType
@@ -248,6 +252,15 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     if ([device isFocusModeSupported:self.autoFocus]) {
         if ([device lockForConfiguration:&error]) {
             [device setFocusMode:self.autoFocus];
+
+            if (!self.autoFocus) {
+                // update focus depth
+                __weak __typeof__(device) weakDevice = device;
+                [device setFocusModeLockedWithLensPosition:self.focusDepth completionHandler:^(CMTime syncTime) {
+                    [weakDevice unlockForConfiguration];
+                }];
+            }
+
         } else {
             if (error) {
                 RCTLogError(@"%s: %@", __func__, error);
@@ -290,16 +303,47 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     }];
 }
 
+
+- (void)updateFocusPoint
+{
+    RCTLog(@"=== updateFocusPoint ===");
+    if (self.autoFocus != AVCaptureFocusModeContinuousAutoFocus) {
+        return;
+    }
+
+    AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+    NSError *error = nil;
+
+    if (![device lockForConfiguration:&error]) {
+        if (error) {
+            RCTLogError(@"%s: %@", __func__, error);
+        }
+        return;
+    }
+
+    if ([device isFocusModeSupported:self.autoFocus]) {
+        if ([device lockForConfiguration:&error]) {
+            CGPoint newFocusPointOfInterest;
+            newFocusPointOfInterest.x = self.focusX;
+            newFocusPointOfInterest.y = self.focusY;
+            [device setFocusPointOfInterest:newFocusPointOfInterest];
+            [device setFocusMode:self.autoFocus];
+        } else {
+            if (error) {
+                RCTLogError(@"%s: %@", __func__, error);
+            }
+        }
+    }
+
+    [device unlockForConfiguration];
+}
+
 /**
  * Update iso and duration for custom exposure
  */
 - (void)updateExposure
 {
     RCTLog(@"=== updateExposure ===");
-    if (self.exposure != RNCameraExposureCustom) {
-        return;
-    }
-
     AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
     NSError *error = nil;
     __weak __typeof__(device) weakDevice = device;
@@ -307,7 +351,8 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     CMTime duration = CMTimeMakeWithSeconds(self.duration, 1000 * 1000 * 1000);
     float iso = self.iso;
 
-    if (![device isExposureModeSupported: AVCaptureExposureModeCustom]) {
+    if (![device isExposureModeSupported: self.exposure]) {
+      RCTLog(@"The exposure mode not supported!!!!!");
       return;
     }
 
@@ -318,12 +363,54 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         return;
     }
 
-    [device setExposureMode:AVCaptureExposureModeCustom];
-    [device setExposureModeCustomWithDuration:duration ISO:iso completionHandler:^(CMTime syncTime) {
+    if (self.exposure != RNCameraExposureCustom) {
+        [device setExposureMode:self.exposure];
+        [self.session commitConfiguration];
         [weakDevice unlockForConfiguration];
+        return;
+    }
+
+    RCTLog(@"reset exposure bias to 0.");
+    [device setExposureTargetBias:0 completionHandler:^(CMTime syncTime) {
+        [device setExposureMode:self.exposure];
+        RCTLog(@"set exposure to ISO: %f, duration: %f", iso, self.duration);
+        [device setExposureModeCustomWithDuration:duration ISO:iso completionHandler:^(CMTime syncTime) {
+            [weakDevice unlockForConfiguration];
+        }];
     }];
     [self.session commitConfiguration];
 }
+
+- (void)updateExposureBias
+{
+    RCTLog(@"=== updateExposureBias ===");
+    if (self.exposure != RNCameraExposureLocked) {
+        RCTLog(@"exposure is not RNCameraExposureLocked, skips.");
+        return;
+    }
+
+    AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+    NSError *error = nil;
+    __weak __typeof__(device) weakDevice = device;
+
+    if (![device lockForConfiguration:&error]) {
+        if (error) {
+            RCTLogError(@"%s: %@", __func__, error);
+        }
+        return;
+    }
+
+    RCTLog(@"%f, %f, %f", self.exposureBias, device.minExposureTargetBias, device.maxExposureTargetBias);
+    if (self.exposureBias >= device.minExposureTargetBias && self.exposureBias <= device.maxExposureTargetBias) {
+        [device setExposureTargetBias:self.exposureBias completionHandler:^(CMTime syncTime) {
+            RCTLog(@"%f, done.", self.exposureBias);
+            [weakDevice unlockForConfiguration];
+        }];
+    }
+
+    [self.session commitConfiguration];
+}
+
 
 - (void)updateZoom {
     RCTLog(@"=== updateZoom ===");
@@ -405,6 +492,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             }
         }
     }
+    [self.session commitConfiguration];
 }
 
 - (void)updatePictureSize
@@ -901,12 +989,17 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
   __weak typeof(self) weakSelf = self;
   RNCamera* strongSelf = weakSelf;
   if (keyPath == @"deviceWhiteBalanceGains") {
-    AVCaptureWhiteBalanceGains *wb = (__bridge AVCaptureWhiteBalanceGains*)[change objectForKey:NSKeyValueChangeNewKey];
+    AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+    AVCaptureWhiteBalanceGains wbGains = device.deviceWhiteBalanceGains;
+    AVCaptureWhiteBalanceTemperatureAndTintValues wb = [device temperatureAndTintValuesForDeviceWhiteBalanceGains: wbGains];
     [strongSelf onStateChanged:@{
-      @"redGain": @(wb->redGain),
-      @"greenGain": @(wb->greenGain),
-      @"blueGain": @(wb->blueGain)
+      @"redGain": @(wbGains.redGain),
+      @"greenGain": @(wbGains.greenGain),
+      @"blueGain": @(wbGains.blueGain),
+      @"temperature": @(wb.temperature),
+      @"tint": @(wb.tint)
     }];
+
   } else if (keyPath == @"ISO") {
     [strongSelf onStateChanged:@{
       @"iso": [change objectForKey:NSKeyValueChangeNewKey]

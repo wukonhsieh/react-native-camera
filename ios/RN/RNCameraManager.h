@@ -49,7 +49,7 @@ typedef NS_ENUM(NSInteger, RNCameraWhiteBalance) {
 
 typedef NS_ENUM(NSInteger, RNCameraExposureMode) {
     RNCameraExposureLocked = AVCaptureExposureModeLocked,
-    RNCameraExposureAuto = AVCaptureExposureModeContinuousAutoExposure,
+    RNCameraExposureAuto = AVCaptureExposureModeAutoExpose, // AVCaptureExposureModeContinuousAutoExposure,
     RNCameraExposureCustom = AVCaptureExposureModeCustom,
 };
 
