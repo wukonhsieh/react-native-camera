@@ -41,8 +41,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         self.sessionQueue = dispatch_queue_create("cameraQueue", DISPATCH_QUEUE_SERIAL);
         self.faceDetectorManager = [self createFaceDetectorManager];
 #if !(TARGET_IPHONE_SIMULATOR)
-        self.previewLayer =
-        [AVCaptureVideoPreviewLayer layerWithSession:self.session];
+        self.previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:self.session];
         self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
         self.previewLayer.needsDisplayOnBoundsChange = YES;
 #endif
@@ -59,6 +58,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
         self.focusX = 0.0;
         self.focusY = 0.0;
         self.exposureBias = 0.0;
+
         //        [[NSNotificationCenter defaultCenter] addObserver:self
         //                                                 selector:@selector(bridgeDidForeground:)
         //                                                     name:EX_UNVERSIONED(@"EXKernelBridgeDidForegroundNotification")
@@ -254,6 +254,10 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
             [device setFocusMode:self.autoFocus];
 
             if (!self.autoFocus) {
+                if (![device respondsToSelector:@selector(isLockingFocusWithCustomLensPositionSupported)] || ![device isLockingFocusWithCustomLensPositionSupported]) {
+                    return;
+                }
+
                 // update focus depth
                 __weak __typeof__(device) weakDevice = device;
                 [device setFocusModeLockedWithLensPosition:self.focusDepth completionHandler:^(CMTime syncTime) {
@@ -352,7 +356,7 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
     float iso = self.iso;
 
     if (![device isExposureModeSupported: self.exposure]) {
-      RCTLog(@"The exposure mode not supported!!!!!");
+      RCTLog(@"The exposure mode not supported!!!!! (exposure: %ld)", self.exposure);
       return;
     }
 
