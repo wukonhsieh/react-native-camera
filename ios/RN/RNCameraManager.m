@@ -186,7 +186,7 @@ RCT_CUSTOM_VIEW_PROPERTY(focusDepth, NSNumber, RNCamera)
 
 RCT_CUSTOM_VIEW_PROPERTY(focusX, NSNumber, RNCamera)
 {
-    if (view.focusX && view.focusX != [RCTConvert float:json]) {
+    if (view.focusX != [RCTConvert float:json]) {
         [view setFocusX:[RCTConvert float:json]];
         [view updateFocusPoint];
         [view updateExposure];
@@ -196,7 +196,7 @@ RCT_CUSTOM_VIEW_PROPERTY(focusX, NSNumber, RNCamera)
 
 RCT_CUSTOM_VIEW_PROPERTY(focusY, NSNumber, RNCamera)
 {
-    if (view.focusY && view.focusY != [RCTConvert float:json]) {
+    if (view.focusY != [RCTConvert float:json]) {
         [view setFocusY:[RCTConvert float:json]];
         [view updateFocusPoint];
         [view updateExposure];
