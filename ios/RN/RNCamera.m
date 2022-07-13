@@ -992,30 +992,35 @@ static NSDictionary *defaultFaceDetectorOptions = nil;
 {
   __weak typeof(self) weakSelf = self;
   RNCamera* strongSelf = weakSelf;
-  if (keyPath == @"deviceWhiteBalanceGains") {
-    AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
-    AVCaptureWhiteBalanceGains wbGains = device.deviceWhiteBalanceGains;
-    AVCaptureWhiteBalanceTemperatureAndTintValues wb = [device temperatureAndTintValuesForDeviceWhiteBalanceGains: wbGains];
-    [strongSelf onStateChanged:@{
-      @"redGain": @(wbGains.redGain),
-      @"greenGain": @(wbGains.greenGain),
-      @"blueGain": @(wbGains.blueGain),
-      @"temperature": @(wb.temperature),
-      @"tint": @(wb.tint)
-    }];
+  @try {
+    if (keyPath == @"deviceWhiteBalanceGains") {
+      AVCaptureDevice *device = [self.videoCaptureDeviceInput device];
+      AVCaptureWhiteBalanceGains wbGains = device.deviceWhiteBalanceGains;
+      AVCaptureWhiteBalanceTemperatureAndTintValues wb = [device temperatureAndTintValuesForDeviceWhiteBalanceGains: wbGains];
+      [strongSelf onStateChanged:@{
+        @"redGain": @(wbGains.redGain),
+        @"greenGain": @(wbGains.greenGain),
+        @"blueGain": @(wbGains.blueGain),
+        @"temperature": @(wb.temperature),
+        @"tint": @(wb.tint)
+      }];
 
-  } else if (keyPath == @"ISO") {
-    [strongSelf onStateChanged:@{
-      @"iso": [change objectForKey:NSKeyValueChangeNewKey]
-    }];
-  } else if (keyPath == @"exposureDuration") {
-    [strongSelf onStateChanged:@{
-      @"duration": [change objectForKey:NSKeyValueChangeNewKey]
-    }];
-  } else {
-    [strongSelf onStateChanged:@{
-      keyPath: [change objectForKey:NSKeyValueChangeNewKey]
-    }];
+    } else if (keyPath == @"ISO") {
+      [strongSelf onStateChanged:@{
+        @"iso": [change objectForKey:NSKeyValueChangeNewKey]
+      }];
+    } else if (keyPath == @"exposureDuration") {
+      [strongSelf onStateChanged:@{
+        @"duration": [change objectForKey:NSKeyValueChangeNewKey]
+      }];
+    } else {
+      [strongSelf onStateChanged:@{
+        keyPath: [change objectForKey:NSKeyValueChangeNewKey]
+      }];
+    }
+  }
+  @catch (NSException * e) {
+    RCTLog(@"Exception: %@", e);
   }
 }
 
